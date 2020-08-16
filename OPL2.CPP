@@ -8,6 +8,8 @@
 #define NOT_FOUND -1
 #define TRUE 1
 #define FALSE 0
+#define ON 1
+#define OFF 0
 
 // I prefer using these Assembler-like types
 typedef unsigned int  WORD;
@@ -119,16 +121,66 @@ void FMInit()
   }
 }
 
+struct note_register {
+  char *note;
+  unsigned char oct;
+  unsigned char on;
+};
+
+note_register channel[9];
+
+void play_note(char *note, unsigned char oct)
+{
+  for(int i=0;i<9;i++)
+  {
+    if(channel[i].on == OFF)
+    {
+      channel[i].note=note;
+      channel[i].oct=oct;
+      channel[i].on=ON;
+      FMnote_on(note,oct,i);
+      break;
+    }
+  }
+}
+
+void mute_note(char *note, unsigned char oct)
+{
+  for(int i=0;i<9;i++)
+  {
+    if(*channel[i].note == *note && channel[i].oct == oct && channel[i].on == ON)
+    {
+      channel[i].on=OFF;
+      FMnote_off(i);
+      break;
+    }
+  }
+}
+
 void main()
 {
   FMInit();
-  FMnote_on("C",4,0);
-  delay(1000);
 
-  FMnote_on("D",4,1);
+  play_note("C",4);
 
   delay(1000);
 
-  FMnote_off(0);
-  FMnote_off(1);
+  play_note("D",4);
+
+  delay(1000);
+
+  play_note("E",4);
+
+  delay(1000);
+
+  mute_note("C",4);
+
+  delay(1000);
+
+  mute_note("D",4);
+
+  delay(1000);
+
+  mute_note("E",4);
+
 }

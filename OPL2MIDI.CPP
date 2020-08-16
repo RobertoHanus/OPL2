@@ -84,7 +84,7 @@ int note_num(char *note_name)
    return NOT_FOUND;
 }
 
-int fnum(char *note, unsigned char oct)
+int fnum(char *note)
 {
   double freq = notes_freq[note_num(note)];
   return freq*pow(2,16)/49716;
@@ -92,18 +92,19 @@ int fnum(char *note, unsigned char oct)
 
 void FMnote_on(unsigned char *note, unsigned char oct, unsigned char channel)
 {
-  int fnumber = fnum(note,oct);
+  int fnumber = fnum(note);
   int LSB_fnum = fnumber & 0xFF;
   int MSB_fnum = (fnumber >> 8) & 0x03;
 
   FMwriteReg(0xA0+channel,LSB_fnum);
   FMwriteReg(0xB0+channel,MSB_fnum | (oct<<2) | 0x20);
-  printf("%i\n",LSB_fnum);
 }
 
-void FMnote_off(unsigned char channel)
+void FMnote_off(char *note, unsigned char oct, unsigned char channel)
 {
-  FMwriteReg(0xB0+channel,0x11);
+  int fnumber = fnum(note);
+  int MSB_fnum = (fnumber >> 8) & 0x03;
+  FMwriteReg(0xB0+channel,MSB_fnum | (oct<<2));
 }
 
 void FMInit()
@@ -118,7 +119,7 @@ void FMInit()
     FMwriteReg(op1_reg_for_channel(0x80,j),0x77);
 
     FMwriteReg(op2_reg_for_channel(0x20,j),0x01);
-    FMwriteReg(op2_reg_for_channel(0x40,j),0x10);
+    FMwriteReg(op2_reg_for_channel(0x40,j),0x00);
     FMwriteReg(op2_reg_for_channel(0x60,j),0xF0);
     FMwriteReg(op2_reg_for_channel(0x80,j),0x77);
   }
@@ -154,7 +155,7 @@ void mute_note(char *note, unsigned char oct)
     if(*channel[i].note == *note && channel[i].oct == oct && channel[i].on == ON)
     {
       channel[i].on=OFF;
-      FMnote_off(i);
+      FMnote_off(note, oct, i);
       break;
     }
   }

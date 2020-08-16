@@ -86,16 +86,19 @@ int note_num(char *note_name)
 
 int fnum(char *note, unsigned char oct)
 {
-  int freq = notes_freq[note_num(note)];
-  return freq*pow(2,20-oct)/49716;
+  double freq = notes_freq[note_num(note)];
+  return freq*pow(2,16)/49716;
 }
 
 void FMnote_on(unsigned char *note, unsigned char oct, unsigned char channel)
 {
   int fnumber = fnum(note,oct);
   int LSB_fnum = fnumber & 0xFF;
+  int MSB_fnum = (fnumber >> 8) & 0x03;
+
   FMwriteReg(0xA0+channel,LSB_fnum);
-  FMwriteReg(0xB0+channel,0x31);
+  FMwriteReg(0xB0+channel,MSB_fnum | (oct<<2) | 0x20);
+  printf("%i\n",LSB_fnum);
 }
 
 void FMnote_off(unsigned char channel)
@@ -162,25 +165,28 @@ void main()
   FMInit();
 
   play_note("C",4);
-
   delay(1000);
-
-  play_note("D",4);
-
-  delay(1000);
-
-  play_note("E",4);
-
-  delay(1000);
-
   mute_note("C",4);
-
+  play_note("D",4);
   delay(1000);
-
   mute_note("D",4);
-
+  play_note("E",4);
   delay(1000);
-
   mute_note("E",4);
+  play_note("F",4);
+  delay(1000);
+  mute_note("F",4);
+  play_note("G",4);
+  delay(1000);
+  mute_note("G",4);
+  play_note("A",4);
+  delay(1000);
+  mute_note("A",4);
+  play_note("B",4);
+  delay(1000);
+  mute_note("B",4);
+  play_note("C",5);
+  delay(1000);
+  mute_note("C",5);
 
 }

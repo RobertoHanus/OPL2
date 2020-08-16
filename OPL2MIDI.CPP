@@ -2,6 +2,7 @@
 #include <string.h>
 #include <dos.h>
 #include <math.h>
+#include <conio.h>
 
 #define EQUAL 0
 #define NOT_EQUAL -1
@@ -123,6 +124,11 @@ void FMInit()
     FMwriteReg(op2_reg_for_channel(0x60,j),0xF0);
     FMwriteReg(op2_reg_for_channel(0x80,j),0x77);
   }
+}
+
+void FMClose()
+{
+  for(int i=0x01;i<0xF5;i++) FMwriteReg(i,0x00);
 }
 
 struct note_register {
@@ -264,15 +270,18 @@ void main(int args_count, char *args[])
    if(args_count<2)
    {
       printf("Debe ingresar un nombre de archivo midi");
+      return;
    }
 
-   unsigned char midi_events[32768];
+   unsigned char midi_events[32767];
    FILE *stream = fopen(args[1],"rb");
    if(stream==NULL)
    {
       printf("Can't open midi file");
       return;
    }
+
+   FMInit();
 
    midi_header_chunk header;
 
@@ -290,8 +299,8 @@ void main(int args_count, char *args[])
    little_endian_to_big_endian(track_header.length,sizeof(track_header.length));
 
    int midi_events_length;
-   if(*((long int*)track_header.length)>32768)
-      midi_events_length=32768;
+   if(*((long int*)track_header.length)>32767)
+      midi_events_length=32767;
    else
       midi_events_length=*((long int*)track_header.length);
 
@@ -310,6 +319,12 @@ void main(int args_count, char *args[])
 
    do
    {
+      if(kbhit()) if(getch()==27)
+      {
+        FMClose();
+        return;
+      }
+
       int j=0;
       *((unsigned long int *)delta_data)=0l;
       *((unsigned long int *)delta_time)=0l;
@@ -517,4 +532,5 @@ void main(int args_count, char *args[])
 
    } while(i < midi_events_length);
    fclose(stream);
+   FMClose();
 }

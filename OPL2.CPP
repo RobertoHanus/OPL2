@@ -1,5 +1,13 @@
 #include <stdio.h>
+#include <string.h>
 #include <dos.h>
+#include <math.h>
+
+#define EQUAL 0
+#define NOT_EQUAL -1
+#define NOT_FOUND -1
+#define TRUE 1
+#define FALSE 0
 
 // I prefer using these Assembler-like types
 typedef unsigned int  WORD;
@@ -10,12 +18,6 @@ typedef unsigned char BYTE;
 */
 
 WORD FMport = 0x388;
-
-/*
-* Enables OPL3 extensions.
-*/
-
-WORD OPL3 = 0;
 
 /*
 * Direct write to any Adlib/SB Pro II FM synthetiser register.
@@ -53,47 +55,80 @@ BYTE FMwriteReg(WORD reg, BYTE data)
       return _AL;
 }
 
+char notes_universe[12][3]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+
+int notes_freq[12]={ 262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494 };
+
+unsigned char op1_offset[9] = { 0x00, 0x01, 0x02, 0x08, 0x09, 0x0A, 0x10, 0x11, 0x12 };
+unsigned char op2_offset[9] = { 0x03, 0x04, 0x05, 0x0B, 0x0C, 0x0D, 0x13, 0x14, 0x15 };
+
+unsigned char op1_reg_for_channel(unsigned char reg, unsigned char channel)
+{
+  return op1_offset[channel]+reg;
+}
+
+unsigned char op2_reg_for_channel(unsigned char reg, unsigned char channel)
+{
+  return op2_offset[channel]+reg;
+}
+
+int note_num(char *note_name)
+{
+   for(int i=0;i<12;i++)
+   {
+      int result=strcmp(notes_universe[i],note_name);
+      if(result==0) return i;
+   }
+   return NOT_FOUND;
+}
+
+int fnum(char *note, unsigned char oct)
+{
+  int freq = notes_freq[note_num(note)];
+  return freq*pow(2,20-oct)/49716;
+}
+
+void FMnote_on(unsigned char *note, unsigned char oct, unsigned char channel)
+{
+  int fnumber = fnum(note,oct);
+  int LSB_fnum = fnumber & 0xFF;
+  FMwriteReg(0xA0+channel,LSB_fnum);
+  FMwriteReg(0xB0+channel,0x31);
+}
+
+void FMnote_off(unsigned char channel)
+{
+  FMwriteReg(0xB0+channel,0x11);
+}
+
+void FMInit()
+{
+  for(int i=0x01;i<=0xF5;i++) FMwriteReg(i,0x00);
+
+  for(int j=0;j<9;j++)
+  {
+    FMwriteReg(op1_reg_for_channel(0x20,j),0x01);
+    FMwriteReg(op1_reg_for_channel(0x40,j),0x10);
+    FMwriteReg(op1_reg_for_channel(0x60,j),0xF0);
+    FMwriteReg(op1_reg_for_channel(0x80,j),0x77);
+
+    FMwriteReg(op2_reg_for_channel(0x20,j),0x01);
+    FMwriteReg(op2_reg_for_channel(0x40,j),0x10);
+    FMwriteReg(op2_reg_for_channel(0x60,j),0xF0);
+    FMwriteReg(op2_reg_for_channel(0x80,j),0x77);
+  }
+}
 
 void main()
 {
+  FMInit();
+  FMnote_on("C",4,0);
+  delay(1000);
 
-   for(int i=0x01;i<=0xF5;i++)
-   {
-      //FMwriteReg(i,0x00);
-   }
+  FMnote_on("D",4,1);
 
+  delay(1000);
 
-   FMwriteReg(0x20,0x02);
-   FMwriteReg(0x40,0x10);
-   FMwriteReg(0x60,0xF0);
-   FMwriteReg(0x80,0x77);
-   FMwriteReg(0xA0,0x98);
-   FMwriteReg(0x23,0x01);
-   FMwriteReg(0x43,0x00);
-   FMwriteReg(0x63,0xF0);
-   FMwriteReg(0x83,0x77);
-   FMwriteReg(0xB0,0x31);
-
-
-   FMwriteReg(0x41,0x10);
-   FMwriteReg(0x61,0xF0);
-   FMwriteReg(0x81,0x77);
-   FMwriteReg(0xA1,0xb0);
-   FMwriteReg(0x24,0x01);
-   FMwriteReg(0x44,0x00);
-   FMwriteReg(0x64,0xF0);
-   FMwriteReg(0x84,0x77);
-   FMwriteReg(0xB1,0x31);
-
-
-
-
-
-
-
-
-   delay(1000);
-
-   FMwriteReg(0xB0,0x11);
-   FMwriteReg(0xB1,0x11);
+  FMnote_off(0);
+  FMnote_off(1);
 }
